@@ -56,12 +56,31 @@ A comprehensive Spring Cloud Gateway example repository featuring essential gate
 
 ---
 
-## Contributing
+## Example: Routing Requests
 
-Contributions are welcome! Please open issues or submit pull requests for improvements.
+The API Gateway is configured to route requests to your microservices.  
+For example, to route the following API:
 
----
+```bash
+curl --location 'http://localhost:8070/api/v1/program/client/task/list'
+```
 
-## License
+The `application.yml` contains:
 
-MIT
+```yaml
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: program-task-service
+          uri: http://localhost:8080
+          predicates:
+            - Path=/api/v1/program/client/task/list
+```
+
+Requests to `http://localhost:8070/api/v1/program/client/task/list` are forwarded to `http://localhost:8080/api/v1/program/client/task/list`.
+
+## Compatibility
+
+Spring Boot: 3.4.2
+Spring Cloud: 2024.0.1
