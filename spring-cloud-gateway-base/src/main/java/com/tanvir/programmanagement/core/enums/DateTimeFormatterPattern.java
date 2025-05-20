@@ -1,4 +1,4 @@
-package com.pfh.programmanagement.core.enums;
+package com.tanvir.programmanagement.core.enums;
 
 import lombok.Getter;
 

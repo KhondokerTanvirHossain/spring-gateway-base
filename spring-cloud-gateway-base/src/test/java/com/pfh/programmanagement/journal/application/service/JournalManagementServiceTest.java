@@ -1,6 +1,6 @@
-package com.pfh.programmanagement.journal.application.service;
+package com.tanvir.programmanagement.journal.application.service;
 
-import com.pfh.programmanagement.journal.application.port.in.dto.request.JournalEntryRequestDto;
+import com.tanvir.programmanagement.journal.application.port.in.dto.request.JournalEntryRequestDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;

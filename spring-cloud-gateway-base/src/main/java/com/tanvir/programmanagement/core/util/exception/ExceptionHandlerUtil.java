@@ -1,4 +1,4 @@
-package com.pfh.programmanagement.core.util.exception;
+package com.tanvir.programmanagement.core.util.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

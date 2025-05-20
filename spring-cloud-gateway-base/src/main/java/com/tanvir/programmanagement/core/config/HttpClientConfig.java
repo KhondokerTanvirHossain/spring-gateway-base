@@ -1,4 +1,4 @@
-package com.pfh.programmanagement.core.config;
+package com.tanvir.programmanagement.core.config;
 
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LogLevel;

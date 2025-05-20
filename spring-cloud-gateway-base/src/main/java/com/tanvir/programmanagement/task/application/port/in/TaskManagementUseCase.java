@@ -1,7 +1,7 @@
-package com.pfh.programmanagement.task.application.port.in;
+package com.tanvir.programmanagement.task.application.port.in;
 
-import com.pfh.programmanagement.task.application.port.in.dto.response.TaskDetailResponseDto;
-import com.pfh.programmanagement.task.application.port.in.dto.response.TaskListResponseDto;
+import com.tanvir.programmanagement.task.application.port.in.dto.response.TaskDetailResponseDto;
+import com.tanvir.programmanagement.task.application.port.in.dto.response.TaskListResponseDto;
 import reactor.core.publisher.Mono;
 
 public interface TaskManagementUseCase {

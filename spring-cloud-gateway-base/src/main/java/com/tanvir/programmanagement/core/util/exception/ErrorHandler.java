@@ -1,4 +1,4 @@
-package com.pfh.programmanagement.core.util.exception;
+package com.tanvir.programmanagement.core.util.exception;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;

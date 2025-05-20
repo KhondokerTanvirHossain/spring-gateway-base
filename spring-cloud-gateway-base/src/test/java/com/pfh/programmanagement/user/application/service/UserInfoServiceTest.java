@@ -1,8 +1,8 @@
-package com.pfh.programmanagement.user.application.service;
+package com.tanvir.programmanagement.user.application.service;
 
-import com.pfh.programmanagement.user.adapter.out.api.dto.UserInfoClientResponseDto;
-import com.pfh.programmanagement.user.application.port.in.dto.UserInfoRequestDto;
-import com.pfh.programmanagement.user.application.port.out.UserInfoClientPort;
+import com.tanvir.programmanagement.user.adapter.out.api.dto.UserInfoClientResponseDto;
+import com.tanvir.programmanagement.user.application.port.in.dto.UserInfoRequestDto;
+import com.tanvir.programmanagement.user.application.port.out.UserInfoClientPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;

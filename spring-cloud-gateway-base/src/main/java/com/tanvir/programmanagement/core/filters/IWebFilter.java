@@ -1,4 +1,4 @@
-package com.pfh.programmanagement.core.filters;
+package com.tanvir.programmanagement.core.filters;
 
 import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +14,8 @@ import reactor.core.publisher.Mono;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 import java.util.Map;
 import java.util.Objects;
 
@@ -92,6 +94,10 @@ public class IWebFilter implements WebFilter {
     }
 
     private void setResponseHeader(ServerWebExchange serverWebExchange) {
+        DateTimeFormatter formatter = new DateTimeFormatterBuilder()
+                .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+                .appendFraction(ChronoField.NANO_OF_SECOND, 3, 6, true)
+                .toFormatter();
         serverWebExchange.getResponse().beforeCommit(() -> {
             Objects.requireNonNull(serverWebExchange.getRequest().getHeaders().get(HeaderNames.REQUEST_RECEIVED_TIME_IN_MS.getValue()))
                 .stream().
@@ -104,7 +110,7 @@ public class IWebFilter implements WebFilter {
                                 .toInstant()
                                 .toEpochMilli()
                                 - LocalDateTime
-                                .parse(s, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS"))
+                                .parse(s, formatter)
                                 .atZone(ZoneId.systemDefault())
                                 .toInstant()
                                 .toEpochMilli()

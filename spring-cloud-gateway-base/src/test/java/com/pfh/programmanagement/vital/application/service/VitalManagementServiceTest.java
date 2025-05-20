@@ -1,4 +1,4 @@
-package com.pfh.programmanagement.vital.application.service;
+package com.tanvir.programmanagement.vital.application.service;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;

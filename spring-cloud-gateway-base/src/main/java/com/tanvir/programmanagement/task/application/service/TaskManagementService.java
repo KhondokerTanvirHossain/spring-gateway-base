@@ -1,9 +1,9 @@
-package com.pfh.programmanagement.task.application.service;
+package com.tanvir.programmanagement.task.application.service;
 
-import com.pfh.programmanagement.task.application.port.in.TaskManagementUseCase;
-import com.pfh.programmanagement.task.application.port.in.dto.response.TaskDetailResponseDto;
-import com.pfh.programmanagement.task.application.port.in.dto.response.TaskInfo;
-import com.pfh.programmanagement.task.application.port.in.dto.response.TaskListResponseDto;
+import com.tanvir.programmanagement.task.application.port.in.TaskManagementUseCase;
+import com.tanvir.programmanagement.task.application.port.in.dto.response.TaskDetailResponseDto;
+import com.tanvir.programmanagement.task.application.port.in.dto.response.TaskInfo;
+import com.tanvir.programmanagement.task.application.port.in.dto.response.TaskListResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
