@@ -83,4 +83,5 @@ Requests to `http://localhost:8070/api/v1/program/client/task/list` are forwarde
 ## Compatibility
 
 Spring Boot: 3.4.2
+
 Spring Cloud: 2024.0.1
