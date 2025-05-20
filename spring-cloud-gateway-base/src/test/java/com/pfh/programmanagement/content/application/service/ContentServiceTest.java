@@ -1,8 +1,8 @@
-package com.tanvir.programmanagement.content.application.service;
+package com.tanvir.gateway.content.application.service;
 
-import com.tanvir.programmanagement.content.application.port.in.dto.response.ContentResponseDto;
-import com.tanvir.programmanagement.content.application.port.out.ContentWebClientPort;
-import com.tanvir.programmanagement.core.ff4j.application.port.in.FF4jUseCase;
+import com.tanvir.gateway.content.application.port.in.dto.response.ContentResponseDto;
+import com.tanvir.gateway.content.application.port.out.ContentWebClientPort;
+import com.tanvir.gateway.core.ff4j.application.port.in.FF4jUseCase;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;

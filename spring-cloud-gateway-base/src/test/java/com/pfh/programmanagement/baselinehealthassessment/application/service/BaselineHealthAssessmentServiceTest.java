@@ -1,9 +1,9 @@
-package com.tanvir.programmanagement.baselinehealthassessment.application.service;
+package com.tanvir.gateway.baselinehealthassessment.application.service;
 
-import com.tanvir.programmanagement.baselinehealthassessment.adapter.out.web.dto.QuestionnaireResponse;
-import com.tanvir.programmanagement.baselinehealthassessment.application.port.in.dto.response.BaselineHealthAssessmentResponseDto;
-import com.tanvir.programmanagement.baselinehealthassessment.application.port.out.QuestionnaireWebclientPort;
-import com.tanvir.programmanagement.core.ff4j.application.port.in.FF4jUseCase;
+import com.tanvir.gateway.baselinehealthassessment.adapter.out.web.dto.QuestionnaireResponse;
+import com.tanvir.gateway.baselinehealthassessment.application.port.in.dto.response.BaselineHealthAssessmentResponseDto;
+import com.tanvir.gateway.baselinehealthassessment.application.port.out.QuestionnaireWebclientPort;
+import com.tanvir.gateway.core.ff4j.application.port.in.FF4jUseCase;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,8 +1,7 @@
-package com.tanvir.programmanagement.baselinehealthassessment.application.port.in;
+package com.tanvir.gateway.baselinehealthassessment.application.port.in;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
 class BaselineHealthAssessmentUseCaseTest {
 
     @Test

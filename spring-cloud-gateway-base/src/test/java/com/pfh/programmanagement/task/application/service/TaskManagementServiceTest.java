@@ -1,4 +1,4 @@
-package com.tanvir.programmanagement.task.application.service;
+package com.tanvir.gateway.task.application.service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

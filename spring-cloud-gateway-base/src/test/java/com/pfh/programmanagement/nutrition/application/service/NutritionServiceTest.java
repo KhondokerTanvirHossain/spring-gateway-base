@@ -1,8 +1,8 @@
-package com.tanvir.programmanagement.nutrition.application.service;
+package com.tanvir.gateway.nutrition.application.service;
 
-import com.tanvir.programmanagement.core.ff4j.application.port.in.FF4jUseCase;
-import com.tanvir.programmanagement.nutrition.application.port.in.response.NutritionResponseDto;
-import com.tanvir.programmanagement.nutrition.application.port.out.NutritionWebClientPort;
+import com.tanvir.gateway.core.ff4j.application.port.in.FF4jUseCase;
+import com.tanvir.gateway.nutrition.application.port.in.response.NutritionResponseDto;
+import com.tanvir.gateway.nutrition.application.port.out.NutritionWebClientPort;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;

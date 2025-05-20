@@ -1,4 +1,4 @@
-package com.tanvir.gateway.core.filters;
+package com.tanvir.core.filters;
 
 import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;

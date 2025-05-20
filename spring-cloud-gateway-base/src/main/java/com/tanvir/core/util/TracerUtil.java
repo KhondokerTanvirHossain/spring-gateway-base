@@ -1,4 +1,4 @@
-package com.tanvir.gateway.core.util;
+package com.tanvir.core.util;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

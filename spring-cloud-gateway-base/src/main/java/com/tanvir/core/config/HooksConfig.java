@@ -1,4 +1,4 @@
-package com.tanvir.gateway.core.config;
+package com.tanvir.core.config;
 
 import org.reactivestreams.Subscription;
 import org.slf4j.MDC;

@@ -1,4 +1,4 @@
-package com.tanvir.gateway.core.util.exception;
+package com.tanvir.core.util.exception;
 
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
