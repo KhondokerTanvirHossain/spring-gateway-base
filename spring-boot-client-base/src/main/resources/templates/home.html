@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Welcome</title>
+</head>
+<body>
+<h1>Welcome OIDC User</h1>
+
+<ul>
+    <li><strong>Username:</strong> <span th:text="${user['sub']}"></span></li>
+    <li><strong>Issuer:</strong> <span th:text="${user['iss']}"></span></li>
+    <li><strong>Audience:</strong> <span th:text="${user['aud']}"></span></li>
+    <li><strong>Authentication Time:</strong> <span th:text="${user['auth_time']}"></span></li>
+</ul>
+
+<!-- IMPORTANT: This points to the correct route via Gateway -->
+<form th:action="@{http://localhost:8000/client/logout}" method="post">
+    <button type="submit">Logout</button>
+</form>
+
+
+</body>
+</html>

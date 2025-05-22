@@ -6,3 +6,17 @@ spring:
           uri: http://localhost:8080
           predicates:
             - Path=/api/v1/program/client/task/list
+
+        - id: auth-server
+          uri: http://localhost:9000
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=0
+
+        - id: client-server
+          uri: http://localhost:8999
+          predicates:
+            - Path=/client/**
+          filters:
+            - StripPrefix=1

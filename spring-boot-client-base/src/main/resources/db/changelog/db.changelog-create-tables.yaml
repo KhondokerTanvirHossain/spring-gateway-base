@@ -1,0 +1,58 @@
+databaseChangeLog:
+    -   changeSet:
+            id: 1
+            author: tanvir
+            changes:
+                -   createTable:
+                        tableName: movie
+                        columns:
+                            -   column:
+                                    name: id
+                                    type: SERIAL
+                                    constraints:
+                                        primaryKey: true
+                                        nullable: false
+                            -   column:
+                                    name: title
+                                    type: VARCHAR(255)
+                                    constraints:
+                                        nullable: false
+                            -   column:
+                                    name: release_date
+                                    type: DATE
+                            -   column:
+                                    name: genre
+                                    type: VARCHAR(100)
+
+                -   createTable:
+                        tableName: movie_catalog
+                        columns:
+                            -   column:
+                                    name: id
+                                    type: SERIAL
+                                    constraints:
+                                        primaryKey: true
+                                        nullable: false
+                            -   column:
+                                    name: movie_id
+                                    type: INT
+                                    constraints:
+                                        nullable: false
+                            -   column:
+                                    name: available
+                                    type: BOOLEAN
+                                    defaultValueBoolean: true
+                            -   column:
+                                    name: price
+                                    type: DECIMAL(10, 2)
+
+    -   changeSet:
+            id: 2
+            author: tanvir
+            changes:
+                -   addForeignKeyConstraint:
+                        baseColumnNames: movie_id
+                        baseTableName: movie_catalog
+                        constraintName: fk_movie_catalog_movie
+                        referencedColumnNames: id
+                        referencedTableName: movie

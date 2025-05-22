@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 3
+      author: tanvir
+      changes:
+        - loadData:
+#            file: classpath:db/data/movie_data.csv
+            file: classpath:db/data/movies_one_m.csv
+            tableName: movie
+
+        - loadData:
+#            file: classpath:db/data/movie_catalog_data.csv
+            file: classpath:db/data/movies_catalogue_one_m.csv
+            tableName: movie_catalog

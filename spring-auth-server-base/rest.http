@@ -1,0 +1,10 @@
+### Get openid-configuration
+GET http://localhost:9000/.well-known/openid-configuration
+Accept: application/json
+
+### Get openid-configuration via gateway
+GET http://localhost:8000/auth/.well-known/openid-configuration
+Accept: application/json
+
+### Get Loging page via gateway
+GET http://localhost:8000/client/
