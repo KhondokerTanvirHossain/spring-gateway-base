@@ -9,6 +9,7 @@ A comprehensive Spring Cloud Gateway example repository featuring essential gate
 This project is a template for building a production-ready API Gateway using Spring Cloud Gateway. It includes:
 
 - Dynamic routing to microservices
+- OIDC authentication routing (with Spring Authorization Server)
 - JWT authentication and role-based authorization (planned)
 - Circuit breaker and fallback support (planned)
 - Request/response logging and distributed tracing
@@ -52,7 +53,6 @@ ext {
     set('springCloudVersion', "2024.0.1")
 }
 
-
 dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-gateway'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -67,7 +67,6 @@ dependencies {
     implementation 'org.modelmapper:modelmapper:3.1.1'
     testImplementation 'com.h2database:h2:2.2.224'
     implementation "org.graalvm.buildtools:native-gradle-plugin:0.10.3"
-
 
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
@@ -103,9 +102,86 @@ spring:
           uri: http://localhost:8080
           predicates:
             - Path=/api/v1/program/client/task/list
+
+        - id: auth-server
+          uri: http://localhost:9000
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=0
+
+        - id: client-server
+          uri: http://localhost:8999
+          predicates:
+            - Path=/client/**
+          filters:
+            - StripPrefix=1
 ```
 
 - Requests to `http://localhost:8070/api/v1/program/client/task/list` are forwarded to `http://localhost:8080/api/v1/program/client/task/list`.
+- Requests to `/auth/**` are forwarded to the authorization server (`:9000`) **without** stripping the `/auth` prefix.
+- Requests to `/client/**` are forwarded to the client app (`:8999`) **with** the `/client` prefix stripped.
+
+---
+
+## OIDC Authentication Routing (Auth Details for Gateway)
+
+### Why Route OIDC Flows Through the Gateway?
+
+Routing all authentication (OIDC) flows through the gateway ensures:
+- A single entry point for all clients and authentication.
+- Consistent session and cookie handling.
+- No direct exposure of the authorization server to the public.
+
+### How It Works
+
+1. **User visits** `http://localhost:8000/client` (gateway).
+2. Gateway proxies to the client app (`:8999`), which triggers OIDC login.
+3. OIDC login/authorize endpoints are routed via gateway to the auth server (`:9000/auth`).
+4. Login page, consent, and all OIDC redirects go through the gateway.
+5. After login, user is redirected back to the client via the gateway.
+
+### Required Auth Server Configuration
+
+**`spring-auth-server-base/src/main/resources/application.properties`:**
+```properties
+spring.application.name=spring-boot-auth-server-base-0
+server.port=9000
+server.servlet.context-path=/auth
+spring.security.oauth2.authorizationserver.issuer=http://localhost:8000/auth
+server.forward-headers-strategy=native
+```
+- The **issuer** must match the gateway’s `/auth` endpoint.
+- `server.forward-headers-strategy=native` ensures correct redirect URLs.
+
+**Java Bean Example (if needed):**
+```java
+@Bean
+public AuthorizationServerSettings authorizationServerSettings() {
+    return AuthorizationServerSettings.builder()
+            .issuer("http://localhost:8000/auth")
+            .build();
+}
+```
+
+### Required Client App Configuration
+
+**`spring-boot-client-base/src/main/resources/application.properties`:**
+```properties
+spring.security.oauth2.client.provider.client-oidc.issuer-uri=http://localhost:8000/auth
+spring.security.oauth2.client.registration.client-oidc.client-id=client
+spring.security.oauth2.client.registration.client-oidc.client-secret=secret
+spring.security.oauth2.client.registration.client-oidc.scope=openid,profile
+spring.security.oauth2.client.registration.client-oidc.redirect-uri=http://localhost:8000/client/login/oauth2/code/client-oidc
+```
+- Both the **issuer URI** and **redirect URI** point to the gateway.
+
+### Example OIDC Flow
+
+1. User accesses a protected route on the client via the gateway.
+2. The client redirects to the OIDC authorization endpoint (proxied by the gateway).
+3. The user logs in via the auth server (proxied by the gateway).
+4. After authentication, the user is redirected back to the client (again, via the gateway).
 
 ---
 
@@ -113,6 +189,7 @@ spring:
 
 - **Spring Cloud Gateway** acts as a reverse proxy, forwarding requests to backend microservices based on route predicates.
 - **Dynamic Routing** is configured in `application.yml`—no controller code is needed for basic proxying.
+- **OIDC Authentication** is routed through the gateway for security and consistency.
 - **Observability** is enabled with Micrometer, Zipkin, and structured logging.
 - **Extensibility**: You can add filters for authentication, rate limiting, circuit breaking, etc.
 
@@ -132,11 +209,20 @@ Test the routing:
 curl --location 'http://localhost:8070/api/v1/program/client/task/list'
 ```
 
+To test OIDC authentication, visit:
+
+```
+http://localhost:8000/client
+```
+
+You should be redirected through the gateway to the login page, and after authentication, back to the client—all via the gateway.
+
 ---
 
 ## Roadmap
 
 - [x] Basic routing via Spring Cloud Gateway
+- [x] OIDC authentication routing
 - [ ] JWT authentication and role-based authorization
 - [ ] Circuit breaker and fallback routes
 - [ ] Request/response logging and distributed tracing
@@ -166,3 +252,5 @@ MIT
 
 - [Spring Cloud Gateway Reference](https://docs.spring.io/spring-cloud-gateway/docs/current/reference/html/)
 - [Spring Cloud Release Train Compatibility](https://spring.io/projects/spring-cloud#overview)
+- [Spring Authorization Server Docs](https://docs.spring.io/spring-authorization-server/docs/current/reference/html/)
+- [Spring Security OAuth2 Client Docs](https://docs.spring.io/spring-security/reference/servlet/oauth2/client/index.html)

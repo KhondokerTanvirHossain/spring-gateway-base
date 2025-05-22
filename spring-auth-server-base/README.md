@@ -1,133 +1,283 @@
-# spring-boot-mvc-jpa-base
+# Spring Boot OIDC Gateway Architecture
 
-This project is a base template for a Spring Boot application with MVC and JPA. It includes request and response logging using Logback and tracing with Micrometer and Zipkin.
+This project demonstrates a secure, production-style setup for **Spring Boot microservices** using:
+- **Spring Cloud Gateway** as an API gateway
+- **Spring Authorization Server** as an OIDC provider
+- **Spring Boot Client** as an OIDC client
 
-## Features
+All authentication flows, including login and logout, are routed **through the gateway**. This ensures a single entry point, consistent session/cookie handling, and a clean separation of concerns.
 
-* Spring Boot MVC
-* JPA for database interactions
-* Request and response logging
-* Distributed tracing with Micrometer and Zipkin
+---
 
-## Setup
+## Architecture Overview
 
-Prerequisites
-
-* Java 17 or higher
-* Spring Boot 3 or higher
-* Zipkin server running locally (default endpoint: http://localhost:9411)
-
-## Dependencies
-
-Add the following dependencies to your build.gradle file:
-
-```gradle
-implementation 'org.springframework.boot:spring-boot-starter-actuator'
-implementation 'io.micrometer:micrometer-tracing-bridge-brave'
-implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
+```
+[Browser]
+   |
+   v
+[Gateway:8000] <----> [Client:8999]
+   |
+   v
+[Auth Server:9000]
 ```
 
-## Configuration
+- **Gateway (`:8000`)**: All traffic (including OIDC) goes through here.
+- **Client (`:8999`)**: OIDC client, protected routes.
+- **Auth Server (`:9000`)**: OIDC provider, `/auth` context path.
 
-Add the following properties to your application.properties file:
+---
 
-```application.properties
-management.tracing.enabled=true
-management.tracing.sampling.probability=1.0
-management.zipkin.tracing.endpoint=http://localhost:9411/api/v2/spans
+## 1. Spring Cloud Gateway
+
+**File:** `spring-cloud-gateway-base/src/main/resources/application.yml`
+
+```yaml
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: client
+          uri: http://localhost:8999
+          predicates:
+            - Path=/client/**
+          filters:
+            - StripPrefix=1
+        - id: auth-server
+          uri: http://localhost:9000
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=0
 ```
 
-## Logback Configuration
+- `/client/**` → client app (strip `/client`)
+- `/auth/**` → auth server (keep `/auth`)
 
-Add the following Logback pattern to your logback-spring.xml:
-
-```xml
-<Pattern>
-    %d{yyyy-MM-dd HH:mm:ss.SSS} [ ${spring.application.name}, %X{spanId:-}, %X{traceId:-}, %X{Method}, %X{Uri} ] [Request-Trace-Id: %X{Request-Trace-Id}] [%t] %highlight(%-5level) %yellow(%class{0}) - %msg%n%throwable
-</Pattern>
+**Start the gateway:**
+```bash
+cd spring-cloud-gateway-base
+./gradlew bootRun
 ```
 
-## Web Filter
+---
 
-The RequestCachingFilter class is used to log request and response details. Annotate it with @Component and @WebFilter:
+## 2. Spring Authorization Server
+
+**File:** `spring-auth-server-base/src/main/resources/application.properties`
+
+```properties
+spring.application.name=spring-boot-auth-server-base-0
+server.port=9000
+server.servlet.context-path=/auth
+spring.security.oauth2.authorizationserver.issuer=http://localhost:8000/auth
+server.forward-headers-strategy=native
+```
+
+- **Issuer** is the gateway’s `/auth` endpoint.
+- **Forward headers** ensures redirects use the gateway’s host/port.
+
+**File:** `spring-auth-server-base/src/main/java/com/tanvir/AuthServerConfig.java`
 
 ```java
-@Component
-@RequiredArgsConstructor
-@WebFilter(filterName = "RequestCachingFilter", urlPatterns = "/*")
-public class RequestCachingFilter extends OncePerRequestFilter {
+@Bean
+public AuthorizationServerSettings authorizationServerSettings() {
+    return AuthorizationServerSettings.builder()
+            .issuer("http://localhost:8000/auth")
+            .build();
+}
+@Bean
+@Order(1)
+public SecurityFilterChain authServerSecurityFilterChain(HttpSecurity http) throws Exception {
+    OAuth2AuthorizationServerConfigurer authorizationServerConfigurer = new OAuth2AuthorizationServerConfigurer();
+    authorizationServerConfigurer.oidc(Customizer.withDefaults()); // Enable OIDC
 
-    private final Tracer tracer;
+    http
+            .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
+            .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+            .csrf(csrf -> csrf.ignoringRequestMatchers(authorizationServerConfigurer.getEndpointsMatcher()))
+            .apply(authorizationServerConfigurer);
 
-    @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    return http.formLogin(Customizer.withDefaults()).build();
+}
 
-        MutableHttpServletRequest mutableRequest = new MutableHttpServletRequest(request);
-        CachedHttpServletRequest cachedRequest = new CachedHttpServletRequest(request);
-        ContentCachingResponseWrapper wrappedResponse = new ContentCachingResponseWrapper(response);
-        Collections.list(request.getHeaderNames()).forEach(headerName ->
-            mutableRequest.putHeader(headerName, request.getHeader(headerName))
-        );
+@Bean
+@Order(2)
+public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+    http
+            .authorizeHttpRequests(auth -> auth
+                    .anyRequest().authenticated()
+            )
+            .formLogin(Customizer.withDefaults()) // ✅ Do NOT set loginPage("/auth/login")
+            .logout(logout -> logout
+                    .logoutUrl("/logout")
+                    .logoutSuccessUrl("http://localhost:8000/client/login?logout")
+                    .invalidateHttpSession(true)
+                    .deleteCookies("JSESSIONID")
+                    .permitAll()
+            );
 
-        setRequestHeaders(mutableRequest);
-        String requestBody = getRequestBody(mutableRequest);
-        setMdcAttributeForLogBack(mutableRequest);
-        logRequest(mutableRequest, requestBody);
-
-        filterChain.doFilter(cachedRequest, wrappedResponse);
-
-        String responseBody = getResponseBody(wrappedResponse);
-        response.getHeaderNames().forEach(headerName ->
-            wrappedResponse.setHeader(headerName, response.getHeader(headerName))
-        );
-        setResponseHeaders(mutableRequest, wrappedResponse);
-        logResponse(mutableRequest, wrappedResponse, responseBody);
-        wrappedResponse.copyBodyToResponse();
-    }
-
-    private void setRequestHeaders(MutableHttpServletRequest request) {
-        // Implementation here
-    }
-
-    private void setResponseHeaders(MutableHttpServletRequest request, HttpServletResponse response) {
-        // Implementation here
-    }
-
-    private String getRequestBody(MutableHttpServletRequest request) {
-        // Implementation here
-    }
-
-    private void setMdcAttributeForLogBack(MutableHttpServletRequest request) {
-        // Implementation here
-    }
-
-    private void logRequest(MutableHttpServletRequest request, String requestBody) {
-        // Implementation here
-    }
-
-    private String getResponseBody(ContentCachingResponseWrapper response) {
-        // Implementation here
-    }
-
-    private void logResponse(MutableHttpServletRequest request, ContentCachingResponseWrapper response, String responseBody) {
-        // Implementation here
-    }
+    return http.build();
 }
 ```
 
-## Running the Application
+**Registered OIDC Client:**
+```java
+@Bean
+public RegisteredClientRepository registeredClientRepository() {
+    RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
+            .clientId("client")
+            .clientSecret("{noop}secret")
+            .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+            .redirectUri("http://localhost:8000/client/login/oauth2/code/client-oidc")
+            .scope(OidcScopes.OPENID)
+            .scope("profile")
+            .build();
 
-1. Start the Zipkin server.
-2. Build and run the Spring Boot application using your IDE or the command line:
+    return new InMemoryRegisteredClientRepository(registeredClient);
+}
+```
 
+**Start the auth server:**
+```bash
+cd spring-auth-server-base
+./gradlew bootRun
+```
+
+---
+
+## 3. Spring Boot OIDC Client
+
+**File:** `spring-boot-client-base/src/main/resources/application.properties`
+
+```properties
+spring.application.name=spring-boot-client-base-0
+server.port=8999
+
+spring.security.oauth2.client.provider.client-oidc.issuer-uri=http://localhost:8000/auth
+spring.security.oauth2.client.registration.client-oidc.client-id=client
+spring.security.oauth2.client.registration.client-oidc.client-secret=secret
+spring.security.oauth2.client.registration.client-oidc.scope=openid,profile
+spring.security.oauth2.client.registration.client-oidc.redirect-uri=http://localhost:8000/client/login/oauth2/code/client-oidc
+
+logging.level.org.springframework.security.oauth2.client=TRACE
+```
+
+- **Issuer URI** and **redirect URI** both point to the gateway.
+
+**Start the client:**
+```bash
+cd spring-boot-client-base
+./gradlew bootRun
+```
+
+---
+
+## 4. How the OIDC Flow Works
+
+1. **User visits** `http://localhost:8000/client`
+2. Gateway proxies to client (`:8999`), which triggers OIDC login.
+3. OIDC login/authorize endpoints are routed via gateway to auth server (`:9000/auth`).
+4. Login page, consent, and all OIDC redirects go through the gateway.
+5. After login, user is redirected back to client via gateway.
+
+---
+
+## 5. Common Issues & Solutions
+
+- **Login page not via gateway:**  
+  Ensure `server.forward-headers-strategy=native` is set in the auth server.
+- **OIDC issuer mismatch:**  
+  The issuer in both the auth server config and OIDC client config must be `http://localhost:8000/auth`.
+- **404 favicon.ico:**  
+  Add a `favicon.ico` to `spring-boot-client-base/src/main/resources/static/` to avoid this warning.
+
+---
+
+## 6. Example: Add a Home Page to Client
+
+**File:** `spring-boot-client-base/src/main/resources/templates/index.html`
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome OIDC User</title>
+</head>
+<body>
+<h1>Welcome OIDC User</h1>
+<ul>
+    <li><strong>Username:</strong> <span th:text="${#authentication.name}"></span></li>
+    <li><strong>Issuer:</strong> <span th:text="${issuer}"></span></li>
+    <li><strong>Audience:</strong> <span th:text="${audience}"></span></li>
+    <li><strong>Authentication Time:</strong> <span th:text="${authTime}"></span></li>
+</ul>
+<form action="/client/logout" method="post">
+    <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+    <button type="submit">Logout</button>
+</form>
+</body>
+</html>
+```
+
+---
+
+## 7. Running the Full Stack
+
+1. **Start all services** (gateway, auth server, client).
+2. Visit [http://localhost:8000/client](http://localhost:8000/client)
+3. Login with:
+   - Username: `testuser`
+   - Password: `password`
+4. You will see the welcome page after login.
+
+---
+
+## 8. Security Notes
+
+- All cookies and sessions are managed via the gateway domain/port.
+- All OIDC endpoints are protected and routed through the gateway.
+- No direct access to the auth server from the browser.
+
+---
+
+## 9. Troubleshooting
+
+- **Login page not loading via gateway:**  
+  Double-check `server.forward-headers-strategy=native` and gateway route for `/auth/**`.
+- **OIDC errors:**  
+  Ensure all URIs in configs use the gateway’s port and context.
+- **404 favicon.ico:**  
+  Add a favicon as described above.
+
+---
+
+## 10. Useful Commands
+
+**Build all projects:**
+```bash
+./gradlew build
+```
+
+**Run with Gradle:**
 ```bash
 ./gradlew bootRun
 ```
 
-3. The application will start and log request and response details with tracing information.
+---
 
+## 11. References
 
-## Conclusion
+- [Spring Authorization Server Docs](https://docs.spring.io/spring-authorization-server/docs/current/reference/html/)
+- [Spring Cloud Gateway Docs](https://docs.spring.io/spring-cloud-gateway/docs/current/reference/html/)
+- [Spring Security OAuth2 Client Docs](https://docs.spring.io/spring-security/reference/servlet/oauth2/client/index.html)
 
-This base template provides a starting point for building Spring Boot applications with MVC, JPA, request/response logging, and distributed tracing. Customize it further to fit your specific requirements.
+---
+
+## 12. Contact
+
+For questions or issues, please open an issue on this repository.
+
+---
+
+**This setup provides a robust, production-style OIDC gateway architecture for Spring Boot microservices.**
