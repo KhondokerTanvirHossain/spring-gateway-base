@@ -1,4 +1,4 @@
-package com.tanvir.spring_boot_mvc_jpa_base.config.mapper;
+package com.tanvir.spring_boot_mvc_jpa_base.core.config.mapper;
 
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
