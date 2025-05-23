@@ -14,6 +14,11 @@ spring:
           filters:
             - StripPrefix=0
 
+        - id: client-oauth2
+          uri: http://localhost:8999
+          predicates:
+            - Path=/oauth2/authorization/**, /login/**, /logout, /error
+          
         - id: client-server
           uri: http://localhost:8999
           predicates:

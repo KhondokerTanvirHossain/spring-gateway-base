@@ -26,7 +26,9 @@ public class SecurityConfig {
                         .deleteCookies("JSESSIONID")
                         .permitAll()
                 )
-                .oauth2Login(Customizer.withDefaults())
+                .oauth2Login(oauth2 -> oauth2
+                        .defaultSuccessUrl("/client/", true)
+                )
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/logout"));
 
         return http.build();

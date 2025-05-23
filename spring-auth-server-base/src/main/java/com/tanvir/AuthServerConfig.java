@@ -55,7 +55,9 @@ public class AuthServerConfig {
                 .authorizeHttpRequests(auth -> auth
                         .anyRequest().authenticated()
                 )
-                .formLogin(Customizer.withDefaults()) // ✅ Do NOT set loginPage("/auth/login")
+                .formLogin(form -> form
+                        .defaultSuccessUrl("http://localhost:8000/client/", true) // Redirect to client app after login
+                )
                 .logout(logout -> logout
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("http://localhost:8000/client/login?logout")
