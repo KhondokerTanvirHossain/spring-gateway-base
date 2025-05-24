@@ -1,4 +1,4 @@
-package com.tanvir.spring_boot_mvc_jpa_base.core.config;
+package com.tanvir.spring_boot_mvc_jpa_base.core.config.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -6,7 +6,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 
 @Configuration
