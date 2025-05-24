@@ -13,6 +13,16 @@
     <li><strong>Authentication Time:</strong> <span th:text="${user['auth_time']}"></span></li>
 </ul>
 
+<h2 th:text="${taskData.userMessage}"></h2>
+<ul>
+    <li th:each="task : ${taskData.tasks}">
+        <strong>Exercises:</strong> <span th:text="${task.exercises}"></span><br>
+        <strong>Vitals:</strong> <span th:text="${task.vitals}"></span><br>
+        <strong>Questionnaires:</strong> <span th:text="${task.questionnaires}"></span>
+        <hr>
+    </li>
+</ul>
+
 <!-- IMPORTANT: This points to the correct route via Gateway -->
 <form th:action="@{http://localhost:8000/client/logout}" method="post">
     <button type="submit">Logout</button>
