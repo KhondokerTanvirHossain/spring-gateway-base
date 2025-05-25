@@ -1,4 +1,4 @@
-package com.tanvir.core.config;
+package com.tanvir.gateway.core.config;
 
 import io.netty.channel.ChannelOption;
 import io.netty.handler.logging.LogLevel;

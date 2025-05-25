@@ -1,4 +1,4 @@
-package com.tanvir.core.filters;
+package com.tanvir.gateway.core.filters;
 
 import lombok.Getter;
 

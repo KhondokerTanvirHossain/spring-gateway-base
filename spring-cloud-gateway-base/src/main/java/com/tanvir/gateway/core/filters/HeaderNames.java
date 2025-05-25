@@ -1,4 +1,4 @@
-package com.tanvir.core.filters;
+package com.tanvir.gateway.core.filters;
 
 import lombok.Getter;
 
@@ -11,6 +11,7 @@ public enum HeaderNames {
     RESPONSE_PROCESSING_TIME_IN_MS("Response-Processing-Time-In-Ms"),
     RESPONSE_SENT_TIME_IN_MS("Response-Sent-Time-In-Ms"),
     TRACE_ID("Trace-Id"),
+    SPAN_ID("Span-Id")
     ;
 
     private final String value;

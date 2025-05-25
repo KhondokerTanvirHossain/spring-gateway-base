@@ -1,5 +1,6 @@
-package com.tanvir.core.filters;
+package com.tanvir.gateway.core.filters;
 
+import com.tanvir.gateway.core.enums.DateTimeFormatterPattern;
 import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,10 +15,9 @@ import reactor.core.publisher.Mono;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatterBuilder;
-import java.time.temporal.ChronoField;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 @Component
 @Slf4j
@@ -38,8 +38,8 @@ public class IWebFilter implements WebFilter {
 
         Map<String, String> mdcContextMap = MDC.getCopyOfContextMap(); // copy the current MDC context
 
-        return webFilterChain.filter(serverWebExchange)
-            .contextWrite(ctx -> ctx.put("mdcContextMap", mdcContextMap)); // put the MDC context into the subscriber context
+        return webFilterChain.filter(mutatedServerWebExchange)
+                .contextWrite(ctx -> ctx.put("mdcContextMap", mdcContextMap)); // put the MDC context into the subscriber context
     }
 
     private void logRequest(ServerHttpRequest request) {
@@ -56,14 +56,14 @@ public class IWebFilter implements WebFilter {
                          Content type : {}
                          Acceptable Media Type {}
                         """,
-            request.getLocalAddress(),
-            request.getURI(),
-            request.getMethod(),
-            request.getHeaders(),
-            request.getPath(),
-            request.getQueryParams(),
-            request.getHeaders().getContentType(),
-            request.getHeaders().getAccept());
+                request.getLocalAddress(),
+                request.getURI(),
+                request.getMethod(),
+                request.getHeaders(),
+                request.getPath(),
+                request.getQueryParams(),
+                request.getHeaders().getContentType(),
+                request.getHeaders().getAccept());
     }
 
     private void logResponse(ServerWebExchange serverWebExchange) {
@@ -79,50 +79,46 @@ public class IWebFilter implements WebFilter {
                              Response Status : {}
                              Content type : {}
                             """,
-                serverWebExchange.getRequest().getLocalAddress(),
-                serverWebExchange.getRequest().getURI(),
-                serverWebExchange.getRequest().getPath(),
-                serverWebExchange.getResponse().getHeaders(),
-                serverWebExchange.getResponse().getStatusCode(),
-                serverWebExchange.getResponse().getHeaders().getContentType()
+                    serverWebExchange.getRequest().getLocalAddress(),
+                    serverWebExchange.getRequest().getURI(),
+                    serverWebExchange.getRequest().getPath(),
+                    serverWebExchange.getResponse().getHeaders(),
+                    serverWebExchange.getResponse().getStatusCode(),
+                    serverWebExchange.getResponse().getHeaders().getContentType()
             );
             log.info("Response processing time for {} is {} ms", serverWebExchange.getRequest().getPath(),
-                Objects.requireNonNull(serverWebExchange.getResponse().getHeaders().
-                    get(HeaderNames.RESPONSE_PROCESSING_TIME_IN_MS.getValue())).stream().findFirst().orElse("0"));
+                    Objects.requireNonNull(serverWebExchange.getResponse().getHeaders().
+                            get(HeaderNames.RESPONSE_PROCESSING_TIME_IN_MS.getValue())).stream().findFirst().orElse("0"));
             return Mono.empty();
         });
     }
 
     private void setResponseHeader(ServerWebExchange serverWebExchange) {
-        DateTimeFormatter formatter = new DateTimeFormatterBuilder()
-                .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
-                .appendFraction(ChronoField.NANO_OF_SECOND, 3, 6, true)
-                .toFormatter();
         serverWebExchange.getResponse().beforeCommit(() -> {
             Objects.requireNonNull(serverWebExchange.getRequest().getHeaders().get(HeaderNames.REQUEST_RECEIVED_TIME_IN_MS.getValue()))
-                .stream().
-                findFirst()
-                .ifPresent(s -> {
-                    serverWebExchange.getResponse().getHeaders().set(HeaderNames.RESPONSE_PROCESSING_TIME_IN_MS.getValue(),
-                        String.valueOf(
-                            LocalDateTime.now()
-                                .atZone(ZoneId.systemDefault())
-                                .toInstant()
-                                .toEpochMilli()
-                                - LocalDateTime
-                                .parse(s, formatter)
-                                .atZone(ZoneId.systemDefault())
-                                .toInstant()
-                                .toEpochMilli()
-                        )
-                    );
-                });
+                    .stream().
+                    findFirst()
+                    .ifPresent(s -> {
+                        serverWebExchange.getResponse().getHeaders().set(HeaderNames.RESPONSE_PROCESSING_TIME_IN_MS.getValue(),
+                                String.valueOf(
+                                        LocalDateTime.now()
+                                                .atZone(ZoneId.systemDefault())
+                                                .toInstant()
+                                                .toEpochMilli()
+                                                - LocalDateTime
+                                                .parse(s, DateTimeFormatter.ofPattern(DateTimeFormatterPattern.DATE_TIME.getValue()))
+                                                .atZone(ZoneId.systemDefault())
+                                                .toInstant()
+                                                .toEpochMilli()
+                                )
+                        );
+                    });
             serverWebExchange.getResponse().getHeaders().set(HeaderNames.RESPONSE_SENT_TIME_IN_MS.getValue(), String.valueOf(LocalDateTime.now()));
             serverWebExchange.getResponse().getHeaders().set(HeaderNames.TRACE_ID.getValue(),
-                Objects.requireNonNull(serverWebExchange.getRequest().getHeaders().get(HeaderNames.TRACE_ID.getValue()))
-                    .stream()
-                    .findAny()
-                    .orElse(""));
+                    Objects.requireNonNull(serverWebExchange.getRequest().getHeaders().get(HeaderNames.TRACE_ID.getValue()))
+                            .stream()
+                            .findAny()
+                            .orElse(""));
             return Mono.empty();
         });
     }
@@ -135,13 +131,13 @@ public class IWebFilter implements WebFilter {
                     String traceId = headers.getOrEmpty(HeaderNames.TRACE_ID.getValue())
                             .stream()
                             .findFirst()
-                        .orElseGet(() -> {
-                            if (tracer.currentSpan() != null) {
-                                return Objects.requireNonNull(tracer.currentSpan()).context().traceId();
-                            } else {
-                                return "default-trace-id";
-                            }
-                        });
+                            .orElseGet(() -> {
+                                if (tracer.currentSpan() != null) {
+                                    return Objects.requireNonNull(tracer.currentSpan()).context().traceId();
+                                } else {
+                                    return "default-trace-id";
+                                }
+                            });
 
                     headers.set(HeaderNames.TRACE_ID.getValue(), traceId);
                 }))
@@ -165,17 +161,16 @@ public class IWebFilter implements WebFilter {
             spanId = "default-span-id";
         }
         MDC.put("traceId", Objects.requireNonNull(serverWebExchange.getRequest().getHeaders().get(HeaderNames.TRACE_ID.getValue()))
-            .stream()
-            .findFirst()
-            .orElseGet(() -> traceId));
-        MDC.put("spanId", Objects.requireNonNull(serverWebExchange.getRequest().getHeaders().get(HeaderNames.TRACE_ID.getValue()))
-            .stream()
-            .findFirst()
-            .orElseGet(() -> spanId));
+                .stream()
+                .findFirst()
+                .orElseGet(() -> traceId));
+        MDC.put("spanId", Optional.ofNullable(serverWebExchange.getRequest().getHeaders().get(HeaderNames.SPAN_ID.getValue()))
+                .map(headers -> headers.stream().findFirst().orElse(spanId))
+                .orElse(spanId));
         MDC.put("Request-Trace-Id", Objects.requireNonNull(serverWebExchange.getRequest().getHeaders().get(HeaderNames.TRACE_ID.getValue()))
-            .stream()
-            .findFirst()
-            .orElseGet(() -> traceId));
+                .stream()
+                .findFirst()
+                .orElseGet(() -> traceId));
     }
 
 }

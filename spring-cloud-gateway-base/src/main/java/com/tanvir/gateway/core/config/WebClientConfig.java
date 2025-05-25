@@ -1,7 +1,7 @@
-package com.tanvir.core.config;
+package com.tanvir.gateway.core.config;
 
-import com.tanvir.core.enums.DateTimeFormatterPattern;
-import com.tanvir.core.filters.HeaderNames;
+import com.tanvir.gateway.core.enums.DateTimeFormatterPattern;
+import com.tanvir.gateway.core.filters.HeaderNames;
 import io.micrometer.tracing.Tracer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;

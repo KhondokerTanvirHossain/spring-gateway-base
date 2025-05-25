@@ -1,4 +1,4 @@
-package com.tanvir.core.enums;
+package com.tanvir.gateway.core.enums;
 
 import lombok.Getter;
 

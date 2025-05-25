@@ -1,7 +1,7 @@
-package com.tanvir.core.util;
+package com.tanvir.gateway.core.util;
 
 import com.google.gson.*;
-import com.tanvir.core.enums.DateTimeFormatterPattern;
+import com.tanvir.gateway.core.enums.DateTimeFormatterPattern;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 

@@ -1,4 +1,4 @@
-package com.tanvir.core.util.exception;
+package com.tanvir.gateway.core.util.exception;
 
 import lombok.*;
 import org.springframework.http.HttpStatus;
