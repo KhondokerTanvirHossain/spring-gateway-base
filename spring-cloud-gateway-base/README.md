@@ -219,32 +219,94 @@ You should be redirected through the gateway to the login page, and after authen
 
 ---
 
-## Roadmap
+---
 
-- [x] Basic routing via Spring Cloud Gateway
-- [x] OIDC authentication routing
-- [ ] JWT authentication and role-based authorization
-- [ ] Circuit breaker and fallback routes
-- [ ] Request/response logging and distributed tracing
-- [ ] Rate limiting and caching
-- [ ] Feature flag management
+### JWT Role Extraction and Mapping
+
+By default, Spring Security expects roles to be in the `scope` or `authorities` claim and prefixed with `ROLE_`.  
+If your JWT uses a custom claim (like `roles`) or does not use the `ROLE_` prefix, you must configure a converter.
+
+**In this project:**
+- The JWT is expected to have a claim named `roles`, e.g.:
+  ```json
+  {
+    "sub": "user1",
+    "roles": ["USER", "ADMIN"]
+  }
+  ```
+- The gateway uses a custom `JwtGrantedAuthoritiesConverter` to extract roles from the `roles` claim and add the `ROLE_` prefix.
 
 ---
 
-## Technologies
+### Gateway Security Configuration
 
-- Java 21
-- Spring Boot 3.4.2
-- Spring Cloud Gateway 2024.0.1
-- Micrometer Tracing & Zipkin
-- Logback with Logstash encoder
-- Lombok, ModelMapper
+See [`GatewaySecurityConfig.java`](src/main/java/com/tanvir/gateway/GatewaySecurityConfig.java):
+
+```java
+@Bean
+public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+    authoritiesConverter.setAuthoritiesClaimName("roles");
+    authoritiesConverter.setAuthorityPrefix("ROLE_"); // Adds ROLE_ prefix to each role
+
+    ReactiveJwtAuthenticationConverter jwtAuthenticationConverter = new ReactiveJwtAuthenticationConverter();
+    jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwt ->
+        Flux.fromIterable(authoritiesConverter.convert(jwt))
+    );
+
+    http
+        .authorizeExchange(exchanges -> exchanges
+            .pathMatchers("/auth/**", "/login/**", "/oauth2/**", "/logout", "/error").permitAll()
+            .pathMatchers("/client/**").permitAll()
+            .pathMatchers("/api/v1/program/client/task/list").hasRole("USER")
+            .pathMatchers("/api/v1/admin/**").hasRole("ADMIN")
+            .anyExchange().authenticated()
+        )
+        .csrf(ServerHttpSecurity.CsrfSpec::disable)
+        .oauth2ResourceServer(oauth2 -> oauth2
+            .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
+        );
+    return http.build();
+}
+```
+
+**Key points:**
+- The converter maps the `roles` claim to Spring Security authorities.
+- `.hasRole("USER")` matches a JWT with `"roles": ["USER"]` (because the converter adds the `ROLE_` prefix).
+- You can control which endpoints require which roles using `.hasRole("...")` or `.hasAuthority("...")`.
 
 ---
 
-## License
+### Customizing Role Mapping
 
-MIT
+If you want to use the roles as-is (without the `ROLE_` prefix), set:
+```java
+authoritiesConverter.setAuthorityPrefix("");
+```
+And use `.hasAuthority("USER")` in your access rules.
+
+---
+
+### Example JWT
+
+A valid JWT for a user with both roles:
+```json
+{
+  "sub": "user1",
+  "roles": ["USER", "ADMIN"],
+  "exp": 1234567890
+}
+```
+
+---
+
+### Summary
+
+- The gateway validates JWTs and enforces RBAC using roles from the token.
+- Role extraction and mapping is fully customizable via the JWT converter.
+- All RBAC logic is centralized at the gateway, keeping downstream services simple and secure.
+
+---
 
 ---
 

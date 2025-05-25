@@ -4,6 +4,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -13,6 +16,8 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
+import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
+import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
@@ -33,6 +38,21 @@ public class AuthServerConfig {
                 .issuer("http://localhost:8000/auth")
                 .build();
     }
+
+    @Bean
+    public OAuth2TokenCustomizer<JwtEncodingContext> tokenCustomizer() {
+        return context -> {
+            Authentication principal = context.getPrincipal();
+            if (context.getTokenType().getValue().equals("access_token") && principal != null) {
+                var roles = principal.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .filter(a -> a.startsWith("ROLE_"))
+                        .toList();
+                context.getClaims().claim("roles", roles);
+            }
+        };
+    }
+
     @Bean
     @Order(1)
     public SecurityFilterChain authServerSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -42,7 +62,7 @@ public class AuthServerConfig {
         http
                 .securityMatcher(authorizationServerConfigurer.getEndpointsMatcher())
                 .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
-                .csrf(csrf -> csrf.ignoringRequestMatchers(authorizationServerConfigurer.getEndpointsMatcher()))
+                .csrf(AbstractHttpConfigurer::disable)
                 .apply(authorizationServerConfigurer);
 
         return http.formLogin(Customizer.withDefaults()).build();
@@ -64,8 +84,8 @@ public class AuthServerConfig {
                         .invalidateHttpSession(true)
                         .deleteCookies("JSESSIONID")
                         .permitAll()
-                );
-
+                )
+                .csrf(AbstractHttpConfigurer::disable);
         return http.build();
     }
 
@@ -92,10 +112,14 @@ public class AuthServerConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return new InMemoryUserDetailsManager(
-            User.withUsername("testuser")
-                .password("{noop}password")
-                .roles("USER")
-                .build()
+                User.withUsername("testuser")
+                        .password("{noop}asdf1234")
+                        .roles("USER")
+                        .build(),
+                User.withUsername("admin")
+                        .password("{noop}asdf1234")
+                        .roles("ADMIN")
+                        .build()
         );
     }
 }

@@ -9,10 +9,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.web.reactive.function.client.ClientRequest;
-import org.springframework.web.reactive.function.client.ClientResponse;
-import org.springframework.web.reactive.function.client.ExchangeFunction;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.*;
+import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
 import java.net.InetAddress;
@@ -60,6 +58,7 @@ public class WebClientConfig {
                                 logResponse(response, baseUrl);
                             });
                 })
+//                .filter(handle401And403())
                 .build();
     }
 
@@ -148,6 +147,25 @@ public class WebClientConfig {
                         .findFirst()
                         .orElse("0")
                 ));
+    }
+
+    // Add this method to your config
+    private ExchangeFilterFunction handle401And403() {
+        return ExchangeFilterFunction.ofResponseProcessor(response -> {
+            if (response.statusCode().value() == 401 || response.statusCode().value() == 403) {
+                return response.bodyToMono(String.class)
+                        .defaultIfEmpty("")
+                        .flatMap(body -> Mono.error(new WebClientResponseException(
+                                "Unauthorized or Forbidden: " + body,
+                                response.statusCode().value(),
+                                (response.statusCode() instanceof org.springframework.http.HttpStatus httpStatus) ? httpStatus.getReasonPhrase() : "",
+                                response.headers().asHttpHeaders(),
+                                null,
+                                null
+                        )));
+            }
+            return Mono.just(response);
+        });
     }
 
 }

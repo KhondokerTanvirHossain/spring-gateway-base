@@ -22,8 +22,8 @@ A comprehensive Spring Cloud Gateway example repository featuring essential gate
 
 ### 2. Security
 - [x] Integrate OIDC authentication (via Spring Authorization Server)
-- [ ] Integrate JWT authentication
-- [ ] Implement role-based authorization
+- [x] Integrate JWT authentication
+- [x] Implement role-based authorization (RBAC)
 
 ### 3. Circuit Breaker
 - [ ] Add Resilience4j circuit breaker
@@ -146,6 +146,58 @@ spring.security.oauth2.client.registration.client-oidc.redirect-uri=http://local
 ```
 
 - All OIDC endpoints and redirects use the gateway’s port and context.
+
+---
+
+## JWT Roles & Role-Based Access Control (RBAC)
+
+### How It Works
+
+- The **Authorization Server** issues JWT tokens that include a `roles` claim (e.g., `["USER", "ADMIN"]`).
+- The **Gateway** extracts roles from the JWT and enforces access control for downstream services using RBAC.
+- The **Client App** can also read roles from the ID token for UI and backend logic.
+
+### Example JWT Payload
+
+```json
+{
+  "sub": "user1",
+  "roles": ["USER", "ADMIN"],
+  "exp": 1234567890
+}
+```
+
+### Gateway Security Configuration
+
+The gateway uses a custom JWT converter to extract roles from the `roles` claim and map them to Spring Security authorities:
+
+```java
+JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+authoritiesConverter.setAuthoritiesClaimName("roles");
+authoritiesConverter.setAuthorityPrefix("ROLE_");
+
+ReactiveJwtAuthenticationConverter jwtAuthenticationConverter = new ReactiveJwtAuthenticationConverter();
+jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(jwt ->
+    Flux.fromIterable(authoritiesConverter.convert(jwt))
+);
+
+http
+    .authorizeExchange(exchanges -> exchanges
+        .pathMatchers("/api/v1/program/client/task/list").hasRole("USER")
+        .pathMatchers("/api/v1/admin/**").hasRole("ADMIN")
+        .anyExchange().authenticated()
+    )
+    .oauth2ResourceServer(oauth2 -> oauth2
+        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter))
+    );
+```
+
+- This ensures only users with the appropriate roles can access protected endpoints.
+
+### Logout Support
+
+- The Authorization Server supports OIDC logout and redirects users back to the client after logout.
+- Logout endpoints and flows are routed through the gateway for a seamless experience.
 
 ---
 

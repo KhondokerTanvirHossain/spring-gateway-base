@@ -6,15 +6,25 @@
 <body>
 <h1>Welcome OIDC User</h1>
 
+<span th:if="${authorities != null}">
+        [Roles:
+        <span th:each="role : ${authorities}" th:text="${role.authority} + ' '" />
+        ]
+</span>
+
 <ul>
     <li><strong>Username:</strong> <span th:text="${user['sub']}"></span></li>
     <li><strong>Issuer:</strong> <span th:text="${user['iss']}"></span></li>
     <li><strong>Audience:</strong> <span th:text="${user['aud']}"></span></li>
     <li><strong>Authentication Time:</strong> <span th:text="${user['auth_time']}"></span></li>
+    <li th:if="${roles != null}"><strong>Roles:</strong> <span th:text="${roles}"></span></li>
 </ul>
 
-<h2 th:text="${taskData.userMessage}"></h2>
-<ul>
+<!-- Show error message if present -->
+<h2 th:if="${taskError}" th:text="${taskError}" style="color:red"></h2>
+
+<!-- Show task list if available -->
+<ul th:if="${taskData != null}">
     <li th:each="task : ${taskData.tasks}">
         <strong>Exercises:</strong> <span th:text="${task.exercises}"></span><br>
         <strong>Vitals:</strong> <span th:text="${task.vitals}"></span><br>
@@ -27,7 +37,6 @@
 <form th:action="@{http://localhost:8000/client/logout}" method="post">
     <button type="submit">Logout</button>
 </form>
-
 
 </body>
 </html>

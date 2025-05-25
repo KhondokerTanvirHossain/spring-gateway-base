@@ -266,6 +266,142 @@ cd spring-boot-client-base
 
 ---
 
+### JWT Role Claim & RBAC Support
+
+The Authorization Server is configured to include user roles in the JWT token, enabling downstream RBAC (Role-Based Access Control) at the gateway and client.
+
+**How it works:**
+- When a user authenticates, their Spring Security roles (e.g., `ROLE_USER`, `ROLE_ADMIN`) are extracted.
+- These roles are added as a `roles` claim in the JWT access token.
+- The gateway and client can then enforce RBAC based on these roles.
+
+**Relevant code:**
+
+```java
+// AuthServerConfig.java
+
+@Bean
+public OAuth2TokenCustomizer<JwtEncodingContext> tokenCustomizer() {
+    return context -> {
+        Authentication principal = context.getPrincipal();
+        if (context.getTokenType().getValue().equals("access_token") && principal != null) {
+            var roles = principal.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .filter(a -> a.startsWith("ROLE_"))
+                    .toList();
+            context.getClaims().claim("roles", roles);
+        }
+    };
+}
+```
+
+- This ensures every access token contains a `roles` claim, e.g.:
+  ```json
+  {
+    "sub": "testuser",
+    "roles": ["ROLE_USER"]
+  }
+  ```
+
+---
+
+### In-Memory Users with Roles
+
+The server defines users and their roles for demo/testing:
+
+```java
+@Bean
+public UserDetailsService userDetailsService() {
+    return new InMemoryUserDetailsManager(
+            User.withUsername("testuser")
+                    .password("{noop}asdf1234")
+                    .roles("USER")
+                    .build(),
+            User.withUsername("admin")
+                    .password("{noop}asdf1234")
+                    .roles("ADMIN")
+                    .build()
+    );
+}
+```
+
+- **testuser / asdf1234** → `ROLE_USER`
+- **admin / asdf1234** → `ROLE_ADMIN`
+
+---
+
+### OIDC Logout Support
+
+The Authorization Server supports OIDC logout and redirects users back to the client after logout.
+
+**Logout endpoint:**
+- `/auth/logout` (Spring Security default)
+- `/auth/connect/logout` (custom controller for OIDC-style logout)
+
+**Relevant code:**
+
+```java
+// LogoutController.java
+@Controller
+public class LogoutController {
+    @GetMapping("/connect/logout")
+    public String logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
+        if (authentication != null) {
+            new SecurityContextLogoutHandler().logout(request, response, authentication);
+        }
+        return "logout";
+    }
+}
+```
+
+- After logout, users see a confirmation page and a link to log in again.
+
+**Logout success URL is configured:**
+
+```java
+.logout(logout -> logout
+    .logoutUrl("/logout")
+    .logoutSuccessUrl("http://localhost:8000/client/login?logout")
+    .invalidateHttpSession(true)
+    .deleteCookies("JSESSIONID")
+    .permitAll()
+)
+```
+
+---
+
+### Registered OIDC Client
+
+The server registers the OIDC client with the correct redirect URI and scopes:
+
+```java
+@Bean
+public RegisteredClientRepository registeredClientRepository() {
+    RegisteredClient registeredClient = RegisteredClient.withId(UUID.randomUUID().toString())
+            .clientId("client")
+            .clientSecret("{noop}secret")
+            .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+            .redirectUri("http://localhost:8000/client/login/oauth2/code/client-oidc")
+            .scope(OidcScopes.OPENID)
+            .scope("profile")
+            .build();
+
+    return new InMemoryRegisteredClientRepository(registeredClient);
+}
+```
+
+---
+
+### Summary of Auth Server RBAC & Logout Features
+
+- **JWT tokens** include a `roles` claim for RBAC enforcement downstream.
+- **In-memory users** with roles for demo/testing.
+- **OIDC logout** is supported, with user-friendly confirmation and redirect to the client.
+- **All flows** (login, consent, logout) are routed through the gateway for a seamless experience.
+
+---
+
 ## 11. References
 
 - [Spring Authorization Server Docs](https://docs.spring.io/spring-authorization-server/docs/current/reference/html/)
